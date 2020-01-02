@@ -7,15 +7,42 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.content_main.*
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var sleepViewModel: SleepViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+
+        //declare and initialize recycle view + adapter
+        val recycler : RecyclerView = findViewById(R.id.recyclerview)
+        val adapter = SleepAdapter(this)
+        recycler.adapter = adapter
+        recycler.layoutManager = LinearLayoutManager(this)
+
+        //initialize view model
+        sleepViewModel = ViewModelProvider(this).get(SleepViewModel::class.java)
+
+        //add observer
+        sleepViewModel.sleepList.observe(
+            this,
+            Observer {
+                if (it.isNotEmpty()) {
+                    //set list to the adapter
+                    adapter.setSleep(it)
+                }
+            }
+        )
 
         fab.setOnClickListener { view ->
            val intent = Intent(this, AddActivity::class.java)
@@ -26,9 +53,22 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
-                
+                val _quality = data?.getIntExtra(AddActivity.EXTRA_QUALITY,0)
+
+                val sleep = Sleep(
+                    id = 0,
+                    startDate = System.currentTimeMillis(),
+                    endDate = System.currentTimeMillis(),
+                    quality = _quality!!
+                )
+
+                //insert new record to DB
+                sleepViewModel.insertSleep(sleep)
+                Toast.makeText(applicationContext,"record saved", Toast.LENGTH_SHORT).show()
+
             }
         }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
